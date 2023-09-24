@@ -1,0 +1,233 @@
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EDFS</title>
+    <script src="https://cdn.bootcdn.net/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+    <script src="https://kit.fontawesome.com/6cbdf1a72e.js" crossorigin="anonymous"></script>
+</head>
+<style>
+  input[type=text], select {
+    width: 100%;
+    padding: 12px 20px;
+    margin: 8px 0;
+    display: inline-block;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    box-sizing: border-box;
+  }
+  
+  input[type=submit] {
+    width: 100%;
+    background-color: #4CAF50;
+    color: white;
+    padding: 14px 20px;
+    margin: 8px 0;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+  }
+  
+  input[type=submit]:hover {
+    background-color: #45a049;
+  }
+  
+  .mydiv{
+    border-radius: 5px;
+    background-color:#fcf9fb;
+    padding: 20px;
+  }
+  .mydiv2{
+    border-radius: 5px;
+    background-color: #fcf9fb;
+    padding: 20px;
+  }
+  </style>
+<body>
+
+<div class ='mydiv'>
+  <form action="{{ url_for('process_command') }}" method="post"> Insert a command
+    <input type="text" name="projectFilepath">
+    <input type="submit" value="Enter">
+    
+  </form>
+
+<!--   {% block content %} 
+  <script type="text/javascript">
+
+    var passed_var = "{{ foo }}"
+    if(passed_var.length === 0 ){
+      window.alert(foo)
+    }
+
+    else{
+
+    }
+  </script>
+  {% endblock %} -->
+  {{mkdirname}} {{mkdirname2}}
+
+  {{value}}
+  {{form}}
+
+  {% for each in name %}
+  <i class="fa-solid fa-file">{{each}}</i>
+  
+  {% endfor %}
+<!-- <h1>{{name}}</h1> -->
+  
+</div>
+<!--beginning of div 1-->
+<br>
+<br>
+<div class = 'mydiv2'>
+<p align = 'center' style="font-size:160%;">Search & Analytics</p>
+ <div>
+        <label for="file_name">Select file:
+            <select id="file_name" style="width:100px">
+                <option value="0">---</option>
+                {% for name in file_names %}
+                    <option value="{{name}}">{{name}}</option>
+                {% endfor %}
+            </select>
+        </label>
+ </div>
+ <!--end of div1-->
+
+<!--beginning of div 2-->
+<div style="margin-top:20px;">
+        <label for="condition" > condition 1:
+            <select id="columns_name" style="width:100px">
+                <option value="0">---</option>
+            </select>
+            <select id="condition" style="width:100px">
+                <option value="=">=</option>
+                <option value=">">></option>
+                <option value=">=">>=</option>
+                <option value="<"><</option>
+                <option value="<="><=</option>
+                <option value="contains">contains</option>
+            </select>
+            <input name="columns_value" id="columns_value">
+        </label>
+</div>
+ <!--end of div2-->
+
+ <!--beginning of div 2-->
+<div style="margin-top:20px;">
+        <button id="query">Query</button>
+</div>
+ <!--end of div2-->
+
+  <!--beginning of div 3-->
+ <div style="margin-top:20px;">
+        <div id="data_partition">
+        </div>
+</div>
+ <!--end of div3-->
+
+
+
+</div>
+<br>
+<br>
+<div class = 'mydiv2'>
+     <!--beginning of div 4-->
+<div style="margin-top:20px;">
+  <label>Result:</label>
+  <div id="data_reduce"></div>
+</div>
+<!--end of div4 -->
+</div>
+
+</body>
+
+
+<script type="text/javascript">
+    var table_name='';
+    var table_columns = []
+    function add_data(partition, is_reduce) {
+        var table = '<div id="data_partition0" style="margin-top:20px;"><label>partition '+ partition.name +':</label><table id="data_table">';
+        if(partition.data.length > 0) {
+            table += '<thead><tr>';
+            for(var i = 0; i < table_columns.length; i++) {
+                table += '<th>' + table_columns[i] + '</th>';
+            }
+            table += '</tr></thead>';
+        }
+        table += '<tbody>';
+        for(var i = 0; i < partition.data.length; i++) {
+            data = partition.data[i]
+            table += '<tr>'
+            for(var j = 0; j < table_columns.length; j++) {
+                table += '<td>' + data[table_columns[j]] + '</td>';
+            }
+            table += '<tr>';
+        }
+        table += '</tbody></table>';
+        if(is_reduce) {
+            $('#data_reduce').append(table);
+        }else{
+            $('#data_partition').append(table);
+        }
+    }
+    $(document).ready(function () {
+      $("#file_name").change(function(){
+          if($(this).val() != '0') {
+            table_name = '';
+            table_columns = []
+            $("#columns_name option[value!='0']").remove();
+            file_name = $(this).val()
+            $.ajax({
+                url:"/get_columns",
+                type: 'GET',
+                data: {file_name: file_name},
+                success:function(result){
+                    table_name = result.table_name
+                    table_columns = result.columns
+                    for(var i = 0; i < table_columns.length; i++) {
+                        $("#columns_name").append("<option value='" +table_columns[i] + "'>"+ table_columns[i] +"</option>");
+                    }
+                }
+            });
+          }
+      });
+      $('#query').click(function() {
+        $('#data_partition').empty();
+        $('#data_reduce').empty();
+        if($("#file_name").val() == '0') {
+            return;
+        }
+        if($("#columns_name").val() == '0') {
+            return;
+        }
+        if($("#columns_value").val() == '') {
+            return;
+        }
+        $.ajax({
+                url:"/get_table_data",
+                type: 'GET',
+                data: {
+                    table_name: table_name,
+                    columns_name: $("#columns_name").val(),
+                    condition: $("#condition").val(),
+                    columns_value: $("#columns_value").val(),
+                },
+                success:function(result){
+                    partitions = result.partitions
+                    reduce = {}
+                    reduce.name = 'total'
+                    reduce.data = result.reduce
+                    for(var i =0; i < partitions.length; i++) {
+                        add_data(partitions[i], false)
+                    }
+                    add_data(reduce, true)
+                }
+            });
+      });
+    });
+</script>
+
+
+</body>
+</html>
